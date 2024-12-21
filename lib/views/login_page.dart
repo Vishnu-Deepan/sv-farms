@@ -1,8 +1,10 @@
 // login_page.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shimmer/shimmer.dart';
 import '../controllers/login_logic.dart';
+import '../services/shared_preferences_helper.dart';
 import '../widgets/nav_and_app_bar.dart';
 import 'register_page.dart';
 
@@ -24,9 +26,45 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
 
-
+    //AUTO LOG IN FOR FASTER TESTING(DELETE AFTER TESTING)
+    _autoLoginTest();
 
   }
+
+  // AUTO LOGIN FOR TESTING STARTS HERE
+  Future<void> _autoLoginTest() async {
+    try {
+      final String _testEmail = 'abc@gmail.com';
+      final String _testPassword = '123456';
+      // Use hardcoded credentials for testing (comment this out for production)
+      final email = _testEmail;
+      final password = _testPassword;
+
+      UserCredential userCredential = await  FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        // Save user session
+        await SharedPreferencesHelper.saveUserSession(
+          user.uid,
+          user.email!,
+          user.phoneNumber ?? "",
+        );
+        Fluttertoast.showToast(msg: "Logged in successfully!");
+
+        // Navigate to Home/Dashboard after successful login
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => BottomNavBar()));
+      }
+    } catch (e) {
+      Fluttertoast.showToast(msg: "Login failed. Error: $e");
+    }
+  }
+  // AUTO LOGIN FOR TESTING UNTILL THIS
+
+
 
   // Method to handle the login process
   void _login() async {
