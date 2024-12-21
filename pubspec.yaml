@@ -38,6 +38,9 @@ dependencies:
   firebase_auth: ^5.3.4
   shared_preferences: ^2.3.4
   fluttertoast: ^8.2.10
+  cloud_firestore: ^5.6.0
+  firebase_storage: ^12.3.7
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +65,9 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/logo.png
+
 assets:
  - assets/logo.png
 

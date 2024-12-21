@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../services/shared_preferences_helper.dart';
+import 'home_screen.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -44,7 +45,7 @@ class _LoginPageState extends State<LoginPage> {
         Fluttertoast.showToast(msg: "Logged in successfully!");
 
         // Navigate to Home/Dashboard after successful login
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomePage()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomePage()));
       }
     } catch (e) {
       Fluttertoast.showToast(msg: "Login failed. Error: $e");
@@ -55,7 +56,12 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Image.asset('assets/logo.png', height: 50),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
