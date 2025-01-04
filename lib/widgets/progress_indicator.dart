@@ -22,7 +22,7 @@ class DecreasingProgressIndicator extends StatelessWidget {
     if (progress > 0.5) {
       progressColor = Colors.green; // Plenty of milk
     } else if (progress > 0.2) {
-      progressColor = Colors.yellow; // Warning, less milk
+      progressColor = Colors.yellow.shade800; // Warning, less milk
     } else {
       progressColor = Colors.red; // Almost out of milk
     }

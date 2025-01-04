@@ -13,32 +13,32 @@ class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
 
   @override
-  _BottomNavBarState createState() => _BottomNavBarState();
+  BottomNavBarState createState() => BottomNavBarState();
 }
 
-class _BottomNavBarState extends State<BottomNavBar> {
+class BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 0;
   final _auth = FirebaseAuth.instance;
 
 
   final List<Widget> _pages = [
     const HomePage(),
-    const PlanDetailsPage(),
     const HistoryPage(),
+    PlanDetailsPage(),
     const ProfilePage(),
   ];
 
   // Standard Flutter icons that can be used with AnimatedBottomNavigationBar
   final List<IconData> _icons = [
     Icons.home,      // Home Icon
-    Icons.play_arrow,      // Plan Details Icon
-    Icons.history,   // History Icon
-    Icons.account_circle, // Profile Icon
+    Icons.calendar_month_rounded,   // History Icon
+    Icons.assessment_outlined,      // Plan Details Icon
+    Icons.person_outlined, // Profile Icon
   ];
 
 
 
-  void _onNavItemTapped(int index) {
+  void onNavItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -49,23 +49,23 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.green.shade800, Colors.green.shade400],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: const Text('SV Farms'),
-        centerTitle: true,
-        actions: [
-          IconButton(onPressed: _logOut, icon: Icon(Icons.logout_rounded),color: Colors.white,),
-        ],
-      ),
+      // appBar: AppBar(
+      //   backgroundColor: Colors.transparent,
+      //   flexibleSpace: Container(
+      //     decoration: BoxDecoration(
+      //       gradient: LinearGradient(
+      //         colors: [Colors.green.shade800, Colors.green.shade400],
+      //         begin: Alignment.topLeft,
+      //         end: Alignment.bottomRight,
+      //       ),
+      //     ),
+      //   ),
+      //   title: const Text('SV Farms'),
+      //   centerTitle: true,
+      //   actions: [
+      //     IconButton(onPressed: _logOut, icon: Icon(Icons.logout_rounded),color: Colors.white,),
+      //   ],
+      // ),
 
         body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
@@ -76,13 +76,12 @@ class _BottomNavBarState extends State<BottomNavBar> {
         icons: _icons,
         activeIndex: _selectedIndex,
         gapLocation: GapLocation.none,
-        onTap: _onNavItemTapped,
+        onTap: onNavItemTapped,
         activeColor: AppTheme.primaryColor,
         inactiveColor: Colors.black54,
         height: 60,
-        elevation: 2,
+        elevation: 0,
         iconSize: 28,
-        blurEffect: true,
       ),
     );
   }

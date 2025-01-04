@@ -61,11 +61,15 @@ class RegisterLogic {
         await SharedPreferencesHelper.saveUserSession(user.uid, user.email!, phone);
 
         // Create the 'activePlans' collection with default values
-        await _firestore.collection('activePlans').doc(user.uid).set({
+        await _firestore.collection('subscriptions').add({
           'uid': user.uid,  // User ID for easy identification
           'planName': 'No Active Plan',
           'totalLitres': 0,
           'remainingLitres': 0,
+          'nextPlanAdded':false,
+          'userEmail': email,
+          'userPhone': phone,
+          'userName': name
         });
 
 

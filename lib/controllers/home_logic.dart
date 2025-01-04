@@ -8,10 +8,11 @@ class HomePageLogic {
   String _planName = 'Loading...';
   int _remainingLiters = 0;
   int _totalLiters = 0;  // Add total liters
+  bool _isNextPlanAdded = false;
   late List<dynamic> _bannerImages = [];
 
   // Method to fetch user data and banner images
-  Future<void> fetchData(Function(String planName, int remainingLiters, int totalLiters, List<dynamic> bannerImages) onDataFetched) async {
+  Future<void> fetchData(Function(String planName, int remainingLiters, int totalLiters, List<dynamic> bannerImages, bool nextPlanAdded) onDataFetched) async {
     try {
       // Fetch user ID
       _userId = _auth.currentUser!.uid;
@@ -23,16 +24,23 @@ class HomePageLogic {
         return;
       }
 
-      // Fetch active plan data based on the user ID (from activePlans collection)
-      var planDoc = await FirebaseFirestore.instance.collection('activePlans').doc(_userId).get();
-      if (planDoc.exists) {
-        _planName = planDoc['planName'] ?? 'No Active Plan';
-        _remainingLiters = planDoc['remainingLitres'] ?? 0;
-        _totalLiters = planDoc['totalLitres'] ?? 0;  // Fetch total liters
+      // Fetch active plan data based on the user ID (from subscriptions collection)
+      var planDoc = await FirebaseFirestore.instance.collection('subscriptions').where('uid',isEqualTo: _userId).get();
+      if (planDoc.docs.isNotEmpty) {
+        DocumentSnapshot existingPLan = planDoc.docs.first;
+        Map<String, dynamic> planData = existingPLan.data() as Map<String, dynamic>;
+
+        _planName = planData['planName'];
+        _remainingLiters = planData['remainingLitres'] ;
+        _totalLiters = planData['totalLitres'];  // Fetch total liters
+        _isNextPlanAdded = planData['nextPlanAdded'];
+
       } else {
         _planName = 'No Active Plan';
         _remainingLiters = 0;
         _totalLiters = 0;  // If no active plan, set total liters to 0
+        _isNextPlanAdded = false; // Default to false if no plan exists
+
       }
 
       // Fetch banner images
@@ -48,7 +56,8 @@ class HomePageLogic {
           .toList();
 
       // Pass data back to UI
-      onDataFetched(_planName, _remainingLiters, _totalLiters, _bannerImages);
+      onDataFetched(_planName, _remainingLiters, _totalLiters, _bannerImages, _isNextPlanAdded);
+
     } catch (e) {
       Fluttertoast.showToast(msg: "Error fetching data: $e");
     }

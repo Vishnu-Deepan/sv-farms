@@ -31,6 +31,7 @@ class _BannerSliderState extends State<BannerSlider> {
     super.dispose();
   }
 
+  // Auto-scroll functionality to move to the next banner
   void _startAutoScroll() {
     _timer = Timer.periodic(Duration(seconds: 3), (timer) {
       if (_currentPage < widget.bannerImages.length - 1) {
@@ -40,7 +41,7 @@ class _BannerSliderState extends State<BannerSlider> {
       }
       _pageController.animateToPage(
         _currentPage,
-        duration: Duration(milliseconds: 300),
+        duration: Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
     });
@@ -55,24 +56,57 @@ class _BannerSliderState extends State<BannerSlider> {
       child: Container(
         height: 200,
         color: Colors.white,
+        child: Center(child: CircularProgressIndicator()),
       ),
     )
         : SizedBox(
-      height: 200,
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.bannerImages.length,
-        onPageChanged: (index) {
-          setState(() {
-            _currentPage = index;
-          });
-        },
-        itemBuilder: (context, index) {
-          return Image.network(
-            widget.bannerImages[index],
-            fit: BoxFit.cover,
-          );
-        },
+      height: 220, // Increase height for better visual impact
+      child: Stack(
+        children: [
+          // PageView for image sliding
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.bannerImages.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(15), // Rounded corners
+                child: Image.network(
+                  widget.bannerImages[index],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                ),
+              );
+            },
+          ),
+          // Custom Page Indicator
+          Positioned(
+            bottom: 10,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(widget.bannerImages.length, (index) {
+                return AnimatedContainer(
+                  duration: Duration(milliseconds: 300),
+                  margin: EdgeInsets.symmetric(horizontal: 5),
+                  height: 8,
+                  width: _currentPage == index ? 20 : 8,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index
+                        ? Colors.blue.shade700
+                        : Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
       ),
     );
   }

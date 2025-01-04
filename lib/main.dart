@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sv_farms/views/home_screen.dart';
 import 'app_theme.dart';
 import 'services/shared_preferences_helper.dart';
 import 'views/login_page.dart';
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: isLoggedIn ? LoginPage() : RegisterPage(),
+      home: isLoggedIn ? HomePage() : LoginPage(),
     );
   }
 }
