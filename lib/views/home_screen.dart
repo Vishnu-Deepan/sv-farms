@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -25,6 +26,8 @@ class _HomePageState extends State<HomePage> {
   List<dynamic> _bannerImages = [];
   bool _isNextPlanAdded = false;
   String? _username = "";
+  String _deliveryPersonId = "";
+  bool _isDeliveryStarted = false;
 
   @override
   void initState() {
@@ -34,15 +37,35 @@ class _HomePageState extends State<HomePage> {
 
   void _fetchData() async {
     await _homePageLogic.fetchData((username, planName, remainingLiters,
-        totalLiters, bannerImages, nextPlanAdded) {
-      setState(() {
-        _planName = planName;
-        _remainingLiters = remainingLiters;
-        _totalLiters = totalLiters;
-        _bannerImages = bannerImages;
-        _isNextPlanAdded = nextPlanAdded;
-        _username = username;
-      });
+        totalLiters, bannerImages, nextPlanAdded, deliveryPersonId) async {
+      // Fetch data from Firestore to check 'isDeliveryStarted' field
+      try {
+        DocumentSnapshot deliveryPersonDoc = await FirebaseFirestore.instance
+            .collection('deliveryPersons')
+            .doc(deliveryPersonId)  // Use the deliveryPersonId as the document ID
+            .get();
+
+        // Check if the document exists
+        if (deliveryPersonDoc.exists) {
+          bool isDeliveryStarted = deliveryPersonDoc['isDeliveryStarted'] ?? false;  // Get the 'isDeliveryStarted' field, default to false if it doesn't exist
+
+          // Set the state with the fetched data
+          setState(() {
+            _planName = planName;
+            _remainingLiters = remainingLiters;
+            _totalLiters = totalLiters;
+            _bannerImages = bannerImages;
+            _isNextPlanAdded = nextPlanAdded;
+            _username = username;
+            _deliveryPersonId = deliveryPersonId;
+            _isDeliveryStarted = isDeliveryStarted;  // Set the value of 'isDeliveryStarted'
+          });
+        } else {
+          print("No delivery person found with id: $deliveryPersonId");
+        }
+      } catch (e) {
+        print("Error fetching delivery person data: $e");
+      }
     });
   }
 
@@ -97,6 +120,7 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             _buildTopSection(),
+            if(_isDeliveryStarted) _buildDeliveryStartedCard(),
             _buildActivePlanCard(),
             _buildBannerSlider(),
             _buildContactSupport(),
@@ -105,6 +129,58 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+  Widget _buildDeliveryStartedCard() {
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 10,
+      color: Colors.blueAccent,  // You can change this color as per your theme
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Network image of a milk van with rounded corners
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.network(
+                'https://static.vecteezy.com/system/resources/previews/004/999/595/non_2x/delivery-truck-with-milk-bottle-free-vector.jpg',  // Replace with your image URL
+                fit: BoxFit.contain,
+                height: 100,  // Increased image height for better visual appeal
+              ),
+            ),
+            SizedBox(height: 20),
+
+            // Top line text (bold and decorative)
+            Text(
+              "Your Delivery Started!",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                fontFamily: 'Roboto',  // Use a custom font if needed
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 10),
+
+            // Informative text with styling for better visibility
+            Text(
+              "Arriving at your doorstep in the next 30 minutes.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white.withOpacity(0.85), // Slight opacity for better readability
+              ),
+                         ),
+
+          ],
+        ),
+      ),
+    );
+  }
+
 
   // Top section with welcome and quick summary
   Widget _buildTopSection() {

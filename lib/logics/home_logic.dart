@@ -9,12 +9,13 @@ class HomePageLogic {
   double _remainingLiters = 0;
   int _totalLiters = 0;
   bool _isNextPlanAdded = false;
+  String _deliveryPersonId = "";
   late List<dynamic> _bannerImages = [];
 
   // Method to fetch user data and banner images
   Future<void> fetchData(
       Function(String username,String planName, double remainingLiters, int totalLiters,
-              List<dynamic> bannerImages, bool nextPlanAdded)
+              List<dynamic> bannerImages, bool nextPlanAdded, String deliveryPersonId)
           onDataFetched) async {
     try {
       // Fetch user ID
@@ -46,6 +47,7 @@ class HomePageLogic {
         _remainingLiters = planData['remainingLitres'];
         _totalLiters = planData['totalLitres']; // Fetch total liters
         _isNextPlanAdded = planData['nextPlanAdded'];
+        _deliveryPersonId = planData['assignedDeliveryPerson'];
       } else {
         _planName = 'No Active Plan';
         _remainingLiters = 0;
@@ -68,7 +70,7 @@ class HomePageLogic {
 
       // Pass data back to UI
       onDataFetched(name!,_planName, _remainingLiters, _totalLiters, _bannerImages,
-          _isNextPlanAdded);
+          _isNextPlanAdded,_deliveryPersonId);
     } catch (e) {
       print("Error debug print : $e");
       Fluttertoast.showToast(msg: "Error fetching data: $e");
