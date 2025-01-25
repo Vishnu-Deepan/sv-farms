@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shimmer/shimmer.dart';  // Import shimmer package
-import '../controllers/register_logic.dart';
+import 'package:shimmer/shimmer.dart';
+import '../logics/register_logic.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {

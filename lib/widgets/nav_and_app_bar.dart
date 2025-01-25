@@ -4,7 +4,7 @@ import 'package:animated_bottom_navigation_bar/animated_bottom_navigation_bar.da
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sv_farms/views/login_page.dart';
 import '../app_theme.dart';
-import '../views/history_page.dart';
+import '../views/calendar_page.dart';
 import '../views/home_screen.dart';
 import '../views/plan_details_page.dart';
 import '../views/profile_page.dart';
@@ -23,7 +23,7 @@ class BottomNavBarState extends State<BottomNavBar> {
 
   final List<Widget> _pages = [
     const HomePage(),
-    const HistoryPage(),
+    const CalendarPage(),
     PlanDetailsPage(),
     const ProfilePage(),
   ];
@@ -77,7 +77,7 @@ class BottomNavBarState extends State<BottomNavBar> {
         activeIndex: _selectedIndex,
         gapLocation: GapLocation.none,
         onTap: onNavItemTapped,
-        activeColor: AppTheme.primaryColor,
+        activeColor: Color(0xFF3B4C7C),
         inactiveColor: Colors.black54,
         height: 60,
         elevation: 0,

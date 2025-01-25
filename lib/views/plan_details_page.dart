@@ -3,22 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:sv_farms/logics/plan_details_logic.dart';
 import 'package:sv_farms/views/payment_page.dart';
 import 'package:intl/intl.dart';
 import 'map_page.dart';
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: PlanDetailsPage(),
-    );
-  }
-}
 
 class PlanDetailsPage extends StatefulWidget {
   @override
@@ -26,6 +14,7 @@ class PlanDetailsPage extends StatefulWidget {
 }
 
 class _PlanDetailsPageState extends State<PlanDetailsPage> {
+  bool pastOrderPending = false;
   PageController _pageController = PageController();
   String selectedPlan = '';
   int selectedPlanPrice = 0;
@@ -40,7 +29,6 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
   int selectedPlanLitres = 0;
   DateTime selectedStartDate = DateTime.now();
 
-  // Available plans
   List<Map<String, dynamic>> plans = [
     {'name': '30 Litres', 'price': 1800, 'litres': 30},
     {'name': '90 Litres', 'price': 5400, 'litres': 90},
@@ -49,7 +37,54 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
     {'name': '355 Litres', 'price': 20590, 'litres': 355, 'discount': 710},
   ];
 
-  // Get user location
+  Future<void> showConfirmationDialog(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Confirm Cash Payment"),
+          content: Text(
+              "Are you sure you want to pay by cash? The plan will be activated once the cash is received by the admin."),
+          actions: [
+            // Cancel button
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text("Cancel"),
+            ),
+            // Confirm button
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                // Handle the confirmation action here (e.g., save data to Firestore)
+                addPendingPayment(userName: userName,
+                    userEmail: userEmail,
+                    userPhone: userPhone,
+                    planName: selectedPlan,
+                    planPrice: selectedPlanPrice,
+                    deliveryLocation: deliveryLocation,
+                    fullAddress: fullAddress,
+                    totalLitres: selectedPlanLitres,
+                    morningLitres: morningAmount,
+                    eveningLitres: eveningAmount,
+                    planStartDate: selectedStartDate,
+                    context: context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(
+                        "Your order is pending confirmation from the admin.")));
+                setState(() {
+                  pastOrderPending = true;
+                });
+              },
+              child: Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<Position> _getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     LocationPermission permission = await Geolocator.checkPermission();
@@ -61,7 +96,6 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
         desiredAccuracy: LocationAccuracy.high);
   }
 
-  // Firebase authentication (simplified, you should handle errors and loading)
   Future<void> _fetchUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -70,9 +104,10 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
         userEmail = user.email ?? 'N/A';
         userPhone = user.phoneNumber ?? 'N/A';
       });
-      // Fetching phone number from Firestore users collection
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
       if (userDoc.exists) {
         setState(() {
           userPhone = userDoc['phone'];
@@ -81,13 +116,6 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchUserData(); // Fetch user data on initialization
-  }
-
-  // Callback function to update the delivery location
   void _updateLocation(LatLng location) {
     setState(() {
       deliveryLocation = location;
@@ -95,21 +123,98 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
     });
   }
 
+  // Function to check if the logged-in user has a pending payment
+  void isPreviousPaymentPending() async {
+    String? userId =
+        FirebaseAuth.instance.currentUser?.uid; // Get the current user ID
+
+    if (userId == null) {
+      print("No user logged in.");
+      return;
+    }
+
+    try {
+      // Check if the document with the user's UID exists in 'pendingPayments'
+      DocumentSnapshot userPaymentDoc = await FirebaseFirestore.instance
+          .collection("pendingCashOrders")
+          .doc(userId) // Document ID is the UID of the logged-in user
+          .get();
+
+      if (userPaymentDoc.exists) {
+        // If the document exists, set pastOrderPending to true
+        setState(() {
+          pastOrderPending = true;
+        });
+      } else {
+        // If the document does not exist, set pastOrderPending to false
+        setState(() {
+          pastOrderPending = false;
+        });
+      }
+    } catch (e) {
+      print("Error checking payment status: $e");
+      setState(() {
+        pastOrderPending = false; // In case of error, assume no pending order
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+    isPreviousPaymentPending();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Order Plan')),
-      body: PageView(
-        controller: _pageController,
-        children: [
-          _buildPlanSelectionPage(),
-          _buildQuantitySelectionPage(),
-          _buildDateSelectionPage(), // Date Picker Page
-          MapPage(_pageController,_updateLocation), // Pass _pageController to MapPage
-          _buildAddressInputPage(),
-          _buildOrderSummaryPage(),
-        ],
+      appBar: AppBar(
+        title: Text(
+          'Plan Details',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 4,
+        backgroundColor: Color(0xFF202C59),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF3B4C7C), Color(0xFF202C59)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        toolbarHeight: 70,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+        ),
       ),
+      body: pastOrderPending
+          ? Container(
+              height: MediaQuery.sizeOf(context).height,
+              width: MediaQuery.sizeOf(context).width,
+              child: Center(
+                child: Text("Previous Order Payment Pending"),
+              ),
+            )
+          : PageView(
+              controller: _pageController,
+              children: [
+                _buildPlanSelectionPage(),
+                _buildQuantitySelectionPage(),
+                _buildDateSelectionPage(),
+                MapPage(_pageController, _updateLocation),
+                _buildAddressInputPage(),
+                _buildOrderSummaryPage(),
+              ],
+            ),
     );
   }
 
@@ -117,46 +222,60 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
   Widget _buildPlanSelectionPage() {
     return Column(
       children: [
-        Text("Select Delivery Plan",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text("Select Delivery Plan",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
         ...plans
             .map((plan) => Card(
-          child: ListTile(
-            title: Text(plan['name']),
-            subtitle: Text('₹${plan['price']}'),
-            onTap: () {
-              setState(() {
-                selectedPlan = plan['name'];
-                selectedPlanPrice = plan['price'];
-                selectedPlanLitres = plan['litres']; // Set selected litres
-              });
-              _pageController.nextPage(
-                  duration: Duration(milliseconds: 300),
-                  curve: Curves.ease);
-            },
-          ),
-        ))
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
+                  elevation: 5,
+                  margin: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                  color: Color(0xFFE5E5E5),
+                  child: ListTile(
+                    title: Text(plan['name'],
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('₹${plan['price']}'),
+                    trailing: Icon(Icons.arrow_forward),
+                    onTap: () {
+                      setState(() {
+                        selectedPlan = plan['name'];
+                        selectedPlanPrice = plan['price'];
+                        selectedPlanLitres = plan['litres'];
+                      });
+                      _pageController.nextPage(
+                          duration: Duration(milliseconds: 300),
+                          curve: Curves.ease);
+                    },
+                  ),
+                ))
             .toList(),
       ],
     );
   }
 
-  // Quantity Selection Page (Morning & Evening)
+  // Quantity Selection Page
   Widget _buildQuantitySelectionPage() {
     return Column(
       children: [
-        Text("Select Delivery Quantity",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text("Select Delivery Quantity",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text("Morning: "),
             DropdownButton<double>(
               value: morningAmount,
-              items: [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
-                  .map((amount) => DropdownMenuItem(
-                  value: amount,
-                  child: Text('${(amount * 1000).toInt()} ml')))
-                  .toList(),
+              items: [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0].map((amount) {
+                return DropdownMenuItem(
+                    value: amount,
+                    child: Text('${(amount * 1000).toInt()} ml'));
+              }).toList(),
               onChanged: (value) {
                 setState(() {
                   morningAmount = value ?? 0;
@@ -166,22 +285,22 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
           ],
         ),
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text("Evening: "),
             DropdownButton<double>(
               value: eveningAmount,
-              items: [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0]
-                  .map((amount) => DropdownMenuItem(
-                  value: amount,
-                  child: Text('${(amount * 1000).toInt()} ml')))
-                  .toList(),
+              items: [0.0, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0].map((amount) {
+                return DropdownMenuItem(
+                    value: amount,
+                    child: Text('${(amount * 1000).toInt()} ml'));
+              }).toList(),
               onChanged: (value) {
                 setState(() {
                   eveningAmount = value ?? 0.0;
                 });
               },
             ),
-
           ],
         ),
         ElevatedButton(
@@ -195,12 +314,15 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
     );
   }
 
-  // Add a page for date selection
+  // Date Selection Page
   Widget _buildDateSelectionPage() {
     return Column(
       children: [
-        Text("Select Plan Start Date",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text("Select Plan Start Date",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
         ElevatedButton(
           onPressed: () async {
             DateTime? pickedDate = await showDatePicker(
@@ -224,15 +346,11 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
         ElevatedButton(
           onPressed: () {
             if (selectedStartDate != null) {
-              // Proceed to the next page and pass the selected date
               _pageController.nextPage(
-                  duration: Duration(milliseconds: 300),
-                  curve: Curves.ease);
+                  duration: Duration(milliseconds: 300), curve: Curves.ease);
             } else {
-              // Show an error message if no date is selected
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Please select a start date")),
-              );
+                  SnackBar(content: Text("Please select a start date")));
             }
           },
           child: Text('Next'),
@@ -245,8 +363,11 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
   Widget _buildAddressInputPage() {
     return Column(
       children: [
-        Text("Enter Delivery Address",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text("Enter Delivery Address",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
         TextField(
           onChanged: (value) {
             setState(() {
@@ -270,40 +391,64 @@ class _PlanDetailsPageState extends State<PlanDetailsPage> {
   Widget _buildOrderSummaryPage() {
     return Column(
       children: [
-        Text("Order Summary",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        Text("Plan: $selectedPlan"),
-        Text("Morning Delivery: ${morningAmount * 1000} ml"),
-        Text("Evening Delivery: ${eveningAmount * 1000} ml"),
-        Text(
-            "Location: ${deliveryLocation.latitude}, ${deliveryLocation.longitude}"),
-        Text("Address: $fullAddress"),
-        Text("User: $userName"),
-        Text("Email: $userEmail"),
-        Text("Phone: $userPhone"),
-        Text("Start Date : ${selectedStartDate.day} / ${selectedStartDate.month} / ${selectedStartDate.year}"),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text("Order Summary",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        ),
+        Card(
+          elevation: 5,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          color: Color(0xFFE5E5E5),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Plan: $selectedPlan"),
+                Text("Morning Delivery: ${morningAmount * 1000} ml"),
+                Text("Evening Delivery: ${eveningAmount * 1000} ml"),
+                Text(
+                    "Location: ${deliveryLocation.latitude}, ${deliveryLocation.longitude}"),
+                Text("Address: $fullAddress"),
+                Text("User: $userName"),
+                Text("Email: $userEmail"),
+                Text("Phone: $userPhone"),
+                Text(
+                    "Start Date : ${selectedStartDate.day} / ${selectedStartDate.month} / ${selectedStartDate.year}"),
+              ],
+            ),
+          ),
+        ),
         ElevatedButton(
           onPressed: () {
             Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (BuildContext context) => PaymentPage(
-                        userName: userName,
-                        userEmail: userEmail,
-                        userPhone: userPhone,
-                        planName: selectedPlan,
-                        planPrice: selectedPlanPrice,
-                        totalAmount: selectedPlanPrice,
-                        deliveryLocation: deliveryLocation,
-                        fullAddress: fullAddress,
-                        totalLitres: selectedPlanLitres,
-                        morningLitres: morningAmount,
-                        eveningLitres: eveningAmount,
-                        planStartDate: selectedStartDate,
-                    )
-                )); // Pass litres
+                          userName: userName,
+                          userEmail: userEmail,
+                          userPhone: userPhone,
+                          planName: selectedPlan,
+                          planPrice: selectedPlanPrice,
+                          totalAmount: selectedPlanPrice,
+                          deliveryLocation: deliveryLocation,
+                          fullAddress: fullAddress,
+                          totalLitres: selectedPlanLitres,
+                          morningLitres: morningAmount,
+                          eveningLitres: eveningAmount,
+                          planStartDate: selectedStartDate,
+                        )));
           },
-          child: Text('Proceed to Pay'),
+          child: Text('Pay Online'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            showConfirmationDialog(context); // Call the dialog function
+          },
+          child: Text("Pay as CASH"),
         ),
       ],
     );

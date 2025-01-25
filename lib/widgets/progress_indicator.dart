@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 
 class DecreasingProgressIndicator extends StatelessWidget {
-  final int _remainingLiters; // Remaining liters of milk
+  final double _remainingLiters; // Remaining liters of milk
   final int _totalLiters; // Total liters of milk
 
   DecreasingProgressIndicator({
-    required int remainingLiters,
+    required double remainingLiters,
     required int totalLiters,
   })  : _remainingLiters = remainingLiters,
         _totalLiters = totalLiters;

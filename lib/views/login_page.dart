@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shimmer/shimmer.dart';
-import '../controllers/login_logic.dart';
+import '../logics/login_logic.dart';
 import '../services/shared_preferences_helper.dart';
 import '../widgets/nav_and_app_bar.dart';
 import 'register_page.dart';
